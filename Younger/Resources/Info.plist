@@ -43,10 +43,12 @@
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>NSHealthShareUsageDescription</key>
-    <string>Younger reads your activity, sleep, heart, mobility, and wellness data to show your daily progress.</string>
-    <key>NSHealthUpdateUsageDescription</key>
-    <string>Younger does not currently write health data.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Younger reads your activity, sleep, heart, mobility, and wellness data to show your daily progress.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Younger does not currently write health data.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Younger uses Bluetooth to display live heart rate broadcast by your WHOOP.</string>
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>

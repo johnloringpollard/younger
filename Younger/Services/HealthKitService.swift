@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+@preconcurrency import CoreBluetooth
 
 actor HealthKitService {
     private let store = HKHealthStore()
@@ -54,6 +55,54 @@ actor HealthKitService {
             "vo2Max": try await vo2,
             "zoneMinutes": try await zoneMinutes
         ]
+    }
+
+    func latestHeartRate() async throws -> HeartRateReading? {
+        guard isAvailable,
+              let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
+            return nil
+        }
+        let start = calendar.date(byAdding: .day, value: -1, to: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let unit = HKUnit.count().unitDivided(by: .minute())
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error {
+                    if isHealthKitNoDataError(error) {
+                        continuation.resume(returning: nil)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
+                    return
+                }
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: HeartRateReading(
+                    bpm: sample.quantity.doubleValue(for: unit),
+                    date: sample.endDate,
+                    source: "Apple Health"
+                ))
+            }
+            store.execute(query)
+        }
+    }
+
+    func estimatedMaximumHeartRate() -> Double {
+        guard let components = try? store.dateOfBirthComponents(),
+              let birthday = calendar.date(from: components),
+              let age = calendar.dateComponents([.year], from: birthday, to: Date()).year else {
+            return 185
+        }
+        return Double(220 - age)
     }
 
     private var readTypes: Set<HKObjectType> {
@@ -237,6 +286,174 @@ actor HealthKitService {
             }
             store.execute(query)
         }
+    }
+}
+
+struct HeartRateReading {
+    let bpm: Double
+    let date: Date
+    let source: String
+}
+
+@MainActor
+final class WhoopHeartRateMonitor: NSObject, ObservableObject {
+    @Published private(set) var reading: HeartRateReading?
+    @Published private(set) var status = "Looking for WHOOP"
+
+    private static let heartRateService = CBUUID(string: "180D")
+    private static let heartRateMeasurement = CBUUID(string: "2A37")
+
+    private var central: CBCentralManager!
+    private var peripheral: CBPeripheral?
+    private var shouldScan = false
+
+    override init() {
+        super.init()
+        central = CBCentralManager(delegate: self, queue: .main)
+    }
+
+    func start() {
+        shouldScan = true
+        beginScanningIfReady()
+    }
+
+    func stop() {
+        shouldScan = false
+        central.stopScan()
+        if let peripheral {
+            central.cancelPeripheralConnection(peripheral)
+        }
+    }
+
+    private func beginScanningIfReady() {
+        guard shouldScan, central.state == .poweredOn else { return }
+        status = "Looking for WHOOP"
+
+        if let connected = central.retrieveConnectedPeripherals(withServices: [Self.heartRateService]).first {
+            connect(connected)
+            return
+        }
+
+        central.scanForPeripherals(
+            withServices: [Self.heartRateService],
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+        )
+    }
+
+    private func connect(_ peripheral: CBPeripheral) {
+        central.stopScan()
+        self.peripheral = peripheral
+        peripheral.delegate = self
+        status = "Connecting to \(peripheral.name ?? "WHOOP")"
+        central.connect(peripheral)
+    }
+
+    private func parseHeartRate(_ data: Data) -> Double? {
+        guard data.count >= 2 else { return nil }
+        let bytes = [UInt8](data)
+        if bytes[0] & 0x01 == 0 {
+            return Double(bytes[1])
+        }
+        guard bytes.count >= 3 else { return nil }
+        return Double(UInt16(bytes[1]) | UInt16(bytes[2]) << 8)
+    }
+}
+
+extension WhoopHeartRateMonitor: @preconcurrency CBCentralManagerDelegate {
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        switch central.state {
+        case .poweredOn:
+            beginScanningIfReady()
+        case .poweredOff:
+            status = "Bluetooth is off"
+        case .unauthorized:
+            status = "Bluetooth permission is required"
+        case .unsupported:
+            status = "Bluetooth is unavailable"
+        default:
+            status = "Waiting for Bluetooth"
+        }
+    }
+
+    func centralManager(
+        _ central: CBCentralManager,
+        didDiscover peripheral: CBPeripheral,
+        advertisementData: [String: Any],
+        rssi RSSI: NSNumber
+    ) {
+        connect(peripheral)
+    }
+
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        status = "Connected to \(peripheral.name ?? "WHOOP")"
+        peripheral.discoverServices([Self.heartRateService])
+    }
+
+    func centralManager(
+        _ central: CBCentralManager,
+        didFailToConnect peripheral: CBPeripheral,
+        error: Error?
+    ) {
+        self.peripheral = nil
+        status = "Couldn’t connect. Retrying"
+        beginScanningIfReady()
+    }
+
+    func centralManager(
+        _ central: CBCentralManager,
+        didDisconnectPeripheral peripheral: CBPeripheral,
+        error: Error?
+    ) {
+        self.peripheral = nil
+        reading = nil
+        status = "WHOOP disconnected. Retrying"
+        beginScanningIfReady()
+    }
+}
+
+extension WhoopHeartRateMonitor: @preconcurrency CBPeripheralDelegate {
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        guard error == nil else {
+            status = "Couldn’t read WHOOP services"
+            return
+        }
+        peripheral.services?
+            .filter { $0.uuid == Self.heartRateService }
+            .forEach { peripheral.discoverCharacteristics([Self.heartRateMeasurement], for: $0) }
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didDiscoverCharacteristicsFor service: CBService,
+        error: Error?
+    ) {
+        guard error == nil,
+              let characteristic = service.characteristics?.first(where: {
+                  $0.uuid == Self.heartRateMeasurement
+              }) else {
+            status = "Heart-rate broadcast was not found"
+            return
+        }
+        peripheral.setNotifyValue(true, for: characteristic)
+        status = "Waiting for heart rate"
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didUpdateValueFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        guard error == nil,
+              let data = characteristic.value,
+              let bpm = parseHeartRate(data) else {
+            return
+        }
+        reading = HeartRateReading(
+            bpm: bpm,
+            date: Date(),
+            source: peripheral.name ?? "WHOOP"
+        )
+        status = "Live from \(peripheral.name ?? "WHOOP")"
     }
 }
 
