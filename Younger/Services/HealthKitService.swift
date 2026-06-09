@@ -13,7 +13,11 @@ actor HealthKitService {
 
     func requestAuthorization() async throws {
         guard isAvailable else { throw HealthKitError.unavailable }
-        try await store.requestAuthorization(toShare: [], read: readTypes)
+        do {
+            try await store.requestAuthorization(toShare: [], read: readTypes)
+        } catch where isHealthKitNoDataError(error) {
+            // HealthKit can report no matching data even though read access was granted.
+        }
     }
 
     func fetchToday() async throws -> [String: Double] {
@@ -100,7 +104,11 @@ actor HealthKitService {
                 options: .cumulativeSum
             ) { _, result, error in
                 if let error {
-                    continuation.resume(throwing: error)
+                    if isHealthKitNoDataError(error) {
+                        continuation.resume(returning: 0)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                     return
                 }
                 continuation.resume(returning: result?.sumQuantity()?.doubleValue(for: unit) ?? 0)
@@ -123,7 +131,11 @@ actor HealthKitService {
                 sortDescriptors: [sort]
             ) { _, samples, error in
                 if let error {
-                    continuation.resume(throwing: error)
+                    if isHealthKitNoDataError(error) {
+                        continuation.resume(returning: 0)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                     return
                 }
                 let sample = samples?.first as? HKQuantitySample
@@ -142,7 +154,11 @@ actor HealthKitService {
             let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) {
                 _, samples, error in
                 if let error {
-                    continuation.resume(throwing: error)
+                    if isHealthKitNoDataError(error) {
+                        continuation.resume(returning: 0)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                     return
                 }
                 let minutes = (samples ?? []).reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) / 60 }
@@ -161,7 +177,11 @@ actor HealthKitService {
             let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) {
                 _, samples, error in
                 if let error {
-                    continuation.resume(throwing: error)
+                    if isHealthKitNoDataError(error) {
+                        continuation.resume(returning: 0)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                     return
                 }
                 let asleepValues = Set([
@@ -199,7 +219,11 @@ actor HealthKitService {
             let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) {
                 _, samples, error in
                 if let error {
-                    continuation.resume(throwing: error)
+                    if isHealthKitNoDataError(error) {
+                        continuation.resume(returning: 0)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                     return
                 }
                 let heartRates = samples as? [HKQuantitySample] ?? []
@@ -214,6 +238,11 @@ actor HealthKitService {
             store.execute(query)
         }
     }
+}
+
+private func isHealthKitNoDataError(_ error: Error) -> Bool {
+    let error = error as NSError
+    return error.domain == HKErrorDomain && error.code == HKError.Code.errorNoData.rawValue
 }
 
 enum HealthKitError: LocalizedError {

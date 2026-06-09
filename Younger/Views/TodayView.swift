@@ -18,7 +18,7 @@ struct TodayView: View {
         .background(Color.clear)
         .toolbar(.hidden, for: .navigationBar)
         .refreshable { await model.refresh() }
-        .alert("Couldn’t refresh", isPresented: Binding(
+        .alert(model.errorTitle, isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }
         )) {

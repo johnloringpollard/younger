@@ -79,7 +79,7 @@ struct SettingsView: View {
             .padding(.bottom, 24)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .alert("WHOOP connection", isPresented: Binding(
+        .alert(model.errorTitle, isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }
         )) {

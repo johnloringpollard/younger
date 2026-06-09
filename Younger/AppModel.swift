@@ -10,6 +10,7 @@ final class AppModel: ObservableObject {
     @Published var whoopConnected = false
     @Published var showingHealthPermission = false
     @Published var lastUpdated = Date()
+    @Published var errorTitle = "Something went wrong"
     @Published var errorMessage: String?
     @Published var useDemoData = true
 
@@ -48,6 +49,7 @@ final class AppModel: ObservableObject {
             useDemoData = false
             try await refreshHealth()
         } catch {
+            errorTitle = "Apple Health connection"
             errorMessage = error.localizedDescription
         }
     }
@@ -62,6 +64,7 @@ final class AppModel: ObservableObject {
             useDemoData = false
             await refreshWhoop()
         } catch {
+            errorTitle = "WHOOP connection"
             errorMessage = error.localizedDescription
         }
     }
@@ -79,6 +82,7 @@ final class AppModel: ObservableObject {
             do {
                 try await refreshHealth()
             } catch {
+                errorTitle = "Apple Health refresh"
                 errorMessage = error.localizedDescription
             }
         }
@@ -120,6 +124,7 @@ final class AppModel: ObservableObject {
             latestWhoopSnapshot = snapshot
             rebuildDataPoints(health: latestHealthValues, whoop: latestWhoopSnapshot)
         } catch {
+            errorTitle = "WHOOP refresh"
             errorMessage = error.localizedDescription
         }
     }
