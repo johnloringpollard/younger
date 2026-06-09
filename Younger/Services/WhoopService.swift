@@ -106,7 +106,7 @@ actor WhoopService {
             if http.statusCode == 401 { throw WhoopError.unauthorized }
             throw WhoopError.server(http.statusCode)
         }
-        return try JSONDecoder.whoop.decode(T.self, from: data)
+        return try JSONDecoder().decode(T.self, from: data)
     }
 }
 
