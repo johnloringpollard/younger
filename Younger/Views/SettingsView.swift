@@ -17,7 +17,11 @@ struct SettingsView: View {
                         color: YoungerTheme.coral,
                         connected: model.healthConnected
                     ) {
-                        Task { await model.connectHealth() }
+                        if model.healthConnected {
+                            model.disconnectHealth()
+                        } else {
+                            Task { await model.connectHealth() }
+                        }
                     }
                     Divider().overlay(YoungerTheme.divider)
                     sourceRow(
@@ -33,6 +37,10 @@ struct SettingsView: View {
                             Task { await model.connectWhoop() }
                         }
                     }
+                    Divider().overlay(YoungerTheme.divider)
+                    Text("Disconnecting Apple Health stops Younger from reading it. Revoke system permission in Health → Sharing → Apps → Younger.")
+                        .font(.caption)
+                        .foregroundStyle(YoungerTheme.secondaryText)
                 }
 
                 section("DEVELOPMENT") {
@@ -121,14 +129,13 @@ struct SettingsView: View {
                 Text(detail).font(.caption).foregroundStyle(YoungerTheme.secondaryText)
             }
             Spacer()
-            if model.isLoading && title == "WHOOP" {
+            if model.isLoading && !connected {
                 ProgressView()
                     .tint(YoungerTheme.mint)
             } else {
-                Button(connected && title == "WHOOP" ? "Disconnect" : connected ? "Connected" : "Connect", action: action)
+                Button(connected ? "Disconnect" : "Connect", action: action)
                     .buttonStyle(.bordered)
                     .tint(connected ? YoungerTheme.mint : color)
-                    .disabled(connected && title == "Apple Health")
             }
         }
     }

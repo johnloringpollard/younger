@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
     private let whoopOAuth = WhoopOAuthCoordinator.shared
     private var latestHealthValues: [String: Double]?
     private var latestWhoopSnapshot: WhoopSnapshot?
+    private let healthConnectionKey = "appleHealthConnected"
 
     var score: Int {
         let totalWeight = metrics.reduce(0) { $0 + $1.weight }
@@ -33,9 +34,15 @@ final class AppModel: ObservableObject {
     }
 
     func start() async {
+        healthConnected = UserDefaults.standard.bool(forKey: healthConnectionKey)
         whoopConnected = await whoop.hasToken
         loadDemoData()
+        if healthConnected {
+            useDemoData = false
+            try? await refreshHealth()
+        }
         if whoopConnected {
+            useDemoData = false
             await refreshWhoop()
         }
     }
@@ -46,12 +53,28 @@ final class AppModel: ObservableObject {
         do {
             try await healthKit.requestAuthorization()
             healthConnected = true
+            UserDefaults.standard.set(true, forKey: healthConnectionKey)
             useDemoData = false
             try await refreshHealth()
         } catch {
             errorTitle = "Apple Health connection"
             errorMessage = error.localizedDescription
         }
+    }
+
+    func disconnectHealth() {
+        healthConnected = false
+        UserDefaults.standard.set(false, forKey: healthConnectionKey)
+        latestHealthValues = nil
+
+        for id in ["steps", "activeEnergy", "exercise", "stand", "mindful"] {
+            replaceMetric(id, value: 0, source: .appleHealth)
+        }
+        if !whoopConnected {
+            replaceMetric("sleep", value: 0, source: .appleHealth)
+            replaceMetric("zoneMinutes", value: 0, source: .appleHealth)
+        }
+        rebuildDataPoints(health: nil, whoop: whoopConnected ? latestWhoopSnapshot : nil)
     }
 
     func connectWhoop() async {
