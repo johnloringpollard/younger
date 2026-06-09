@@ -61,7 +61,7 @@ struct TodayView: View {
                 Text(scoreMessage)
                     .font(.title3.weight(.bold))
                     .fixedSize(horizontal: false, vertical: true)
-                Text("\(model.greenCount) of \(model.metrics.filter(\.contributesToScore).count) available signals are green.")
+                Text("\(model.greenCount) of \(model.visibleMetrics.filter(\.contributesToScore).count) available signals are green.")
                     .font(.subheadline)
                     .foregroundStyle(YoungerTheme.secondaryText)
                 HStack(spacing: 6) {
@@ -120,15 +120,15 @@ struct TodayView: View {
 
     private var metricGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            ForEach(model.metrics) { metric in
-                NavigationLink(value: metric.id) {
+            ForEach(model.visibleMetrics) { metric in
+                NavigationLink {
+                    MetricDetailView(metricID: metric.id)
+                } label: {
                     MetricCard(metric: metric)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
-        }
-        .navigationDestination(for: String.self) { id in
-            MetricDetailView(metricID: id)
         }
     }
 

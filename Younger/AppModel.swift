@@ -21,17 +21,28 @@ final class AppModel: ObservableObject {
     private var latestWhoopSnapshot: WhoopSnapshot?
     private let healthConnectionKey = "appleHealthConnected"
 
+    var visibleMetrics: [DailyMetric] {
+        metrics.filter { metric in
+            if useDemoData { return true }
+            return switch metric.source {
+            case .appleHealth: healthConnected
+            case .whoop: whoopConnected
+            case .younger: true
+            }
+        }
+    }
+
     var score: Int {
-        let scoredMetrics = metrics.filter(\.contributesToScore)
+        let scoredMetrics = visibleMetrics.filter(\.contributesToScore)
         let totalWeight = scoredMetrics.reduce(0) { $0 + $1.weight }
         guard totalWeight > 0 else { return 0 }
         let weighted = scoredMetrics.reduce(0) { $0 + ($1.progress * $1.weight) }
         return Int((weighted / totalWeight * 100).rounded())
     }
 
-    var greenCount: Int { metrics.filter { $0.status == .green }.count }
+    var greenCount: Int { visibleMetrics.filter { $0.status == .green }.count }
     var focusMetrics: [DailyMetric] {
-        metrics
+        visibleMetrics
             .filter { $0.contributesToScore && $0.status != .green }
             .sorted { $0.progress < $1.progress }
     }
