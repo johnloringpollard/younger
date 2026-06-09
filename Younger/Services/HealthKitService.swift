@@ -37,6 +37,7 @@ actor HealthKitService {
         async let respiratoryRate = latest(.respiratoryRate, unit: HKUnit.count().unitDivided(by: .minute()))
         async let oxygen = latest(.oxygenSaturation, unit: .percent())
         async let vo2 = latest(.vo2Max, unit: HKUnit(from: "ml/kg*min"))
+        async let leanBodyMass = latest(.leanBodyMass, unit: .gramUnit(with: .kilo))
         async let zoneMinutes = activeHeartRateMinutes()
 
         return [
@@ -53,6 +54,7 @@ actor HealthKitService {
             "respiratoryRate": try await respiratoryRate,
             "oxygenSaturation": try await oxygen * 100,
             "vo2Max": try await vo2,
+            "leanBodyMass": try await leanBodyMass,
             "zoneMinutes": try await zoneMinutes
         ]
     }

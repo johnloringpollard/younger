@@ -76,7 +76,11 @@ actor WhoopService {
             respiratoryRate: sleep?.respiratoryRate,
             oxygenSaturation: recovery?.oxygenSaturation,
             skinTemperature: recovery?.skinTemperature,
-            zoneMinutes: Double(zoneMillis) / 60_000
+            zoneMinutes: Double(zoneMillis) / 60_000,
+            sleepConsistency: sleep?.sleepConsistency,
+            zoneOneToThreeMinutes: nil,
+            zoneFourToFiveMinutes: nil,
+            strengthMinutes: nil
         )
     }
 
@@ -187,6 +191,10 @@ private struct BackendSnapshot: Decodable {
     let oxygenSaturation: Double?
     let skinTemperature: Double?
     let zoneMinutes: Double?
+    let sleepConsistency: Double?
+    let zoneOneToThreeMinutes: Double?
+    let zoneFourToFiveMinutes: Double?
+    let strengthMinutes: Double?
 
     var whoopSnapshot: WhoopSnapshot {
         WhoopSnapshot(
@@ -199,7 +207,11 @@ private struct BackendSnapshot: Decodable {
             respiratoryRate: respiratoryRate,
             oxygenSaturation: oxygenSaturation,
             skinTemperature: skinTemperature,
-            zoneMinutes: zoneMinutes
+            zoneMinutes: zoneMinutes,
+            sleepConsistency: sleepConsistency,
+            zoneOneToThreeMinutes: zoneOneToThreeMinutes,
+            zoneFourToFiveMinutes: zoneFourToFiveMinutes,
+            strengthMinutes: strengthMinutes
         )
     }
 
@@ -214,6 +226,10 @@ private struct BackendSnapshot: Decodable {
         case oxygenSaturation = "oxygen_saturation"
         case skinTemperature = "skin_temperature"
         case zoneMinutes = "zone_minutes"
+        case sleepConsistency = "sleep_consistency"
+        case zoneOneToThreeMinutes = "zone_one_to_three_minutes"
+        case zoneFourToFiveMinutes = "zone_four_to_five_minutes"
+        case strengthMinutes = "strength_minutes"
     }
 }
 
@@ -264,11 +280,13 @@ private struct SleepRecord: Decodable {
 private struct SleepScore: Decodable {
     let stageSummary: StageSummary
     let sleepPerformance: Double
+    let sleepConsistency: Double?
     let respiratoryRate: Double
 
     enum CodingKeys: String, CodingKey {
         case stageSummary = "stage_summary"
         case sleepPerformance = "sleep_performance_percentage"
+        case sleepConsistency = "sleep_consistency_percentage"
         case respiratoryRate = "respiratory_rate"
     }
 }

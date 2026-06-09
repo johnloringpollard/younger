@@ -61,11 +61,13 @@ struct SettingsView: View {
                 section("DAILY GOALS") {
                     goalRow(id: "steps", title: "Steps", range: 5_000...20_000, step: 1_000)
                     Divider().overlay(YoungerTheme.divider)
-                    goalRow(id: "sleep", title: "Sleep", range: 6...10, step: 0.5)
+                    goalRow(id: "sleep", title: "Sleep", range: 6...9, step: 0.5)
                     Divider().overlay(YoungerTheme.divider)
-                    goalRow(id: "zoneMinutes", title: "Heart zones", range: 10...90, step: 5)
+                    goalRow(id: "zoneOneToThree", title: "Zones 1–3", range: 15...90, step: 5)
                     Divider().overlay(YoungerTheme.divider)
-                    goalRow(id: "exercise", title: "Exercise", range: 15...120, step: 5)
+                    goalRow(id: "zoneFourToFive", title: "Zones 4–5", range: 5...30, step: 1)
+                    Divider().overlay(YoungerTheme.divider)
+                    goalRow(id: "strength", title: "Strength", range: 10...60, step: 5)
                 }
 
                 section("HOW YOUR SCORE WORKS") {

@@ -34,12 +34,14 @@ enum MetricCategory: String, CaseIterable, Identifiable {
 }
 
 enum MetricStatus {
+    case unavailable
     case red
     case yellow
     case green
 
     var color: Color {
         switch self {
+        case .unavailable: YoungerTheme.secondaryText
         case .red: YoungerTheme.coral
         case .yellow: YoungerTheme.gold
         case .green: YoungerTheme.mint
@@ -48,6 +50,7 @@ enum MetricStatus {
 
     var label: String {
         switch self {
+        case .unavailable: "Not available"
         case .red: "Needs attention"
         case .yellow: "Getting closer"
         case .green: "On target"
@@ -55,36 +58,61 @@ enum MetricStatus {
     }
 }
 
+enum MetricGoal {
+    case atLeast
+    case atMost
+    case informational
+}
+
 struct DailyMetric: Identifiable {
     let id: String
     let title: String
     let category: MetricCategory
     let source: MetricSource
-    var value: Double
+    var value: Double?
     var target: Double
     let unit: String
     let weight: Double
     let icon: String
     let action: String
     var decimals: Int = 0
+    var goal: MetricGoal = .atLeast
+
+    var contributesToScore: Bool {
+        value != nil && target > 0 && goal != .informational
+    }
 
     var progress: Double {
-        guard target > 0 else { return 0 }
-        return min(max(value / target, 0), 1)
+        guard let value, target > 0 else { return 0 }
+        switch goal {
+        case .atLeast:
+            return min(max(value / target, 0), 1)
+        case .atMost:
+            guard value > 0 else { return 0 }
+            return min(max(target / value, 0), 1)
+        case .informational:
+            return 0
+        }
     }
 
     var uncappedProgress: Double {
-        guard target > 0 else { return 0 }
+        guard let value, target > 0 else { return 0 }
+        if goal == .atMost {
+            guard value > 0 else { return 0 }
+            return max(target / value, 0)
+        }
         return max(value / target, 0)
     }
 
     var status: MetricStatus {
+        guard value != nil, goal != .informational else { return .unavailable }
         if progress >= 1 { return .green }
         if progress >= 0.6 { return .yellow }
         return .red
     }
 
     var formattedValue: String {
+        guard let value else { return "—" }
         if unit == "steps" {
             return value.formatted(.number.precision(.fractionLength(0)))
         }
@@ -93,6 +121,14 @@ struct DailyMetric: Identifiable {
 
     var formattedTarget: String {
         target.formatted(.number.precision(.fractionLength(decimals)))
+    }
+
+    var targetDescription: String {
+        switch goal {
+        case .atLeast: "Goal \(formattedTarget) \(unit)"
+        case .atMost: "Goal ≤ \(formattedTarget) \(unit)"
+        case .informational: "Track over time"
+        }
     }
 }
 
@@ -122,4 +158,8 @@ struct WhoopSnapshot {
     var oxygenSaturation: Double?
     var skinTemperature: Double?
     var zoneMinutes: Double?
+    var sleepConsistency: Double?
+    var zoneOneToThreeMinutes: Double?
+    var zoneFourToFiveMinutes: Double?
+    var strengthMinutes: Double?
 }

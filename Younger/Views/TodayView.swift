@@ -61,7 +61,7 @@ struct TodayView: View {
                 Text(scoreMessage)
                     .font(.title3.weight(.bold))
                     .fixedSize(horizontal: false, vertical: true)
-                Text("\(model.greenCount) of \(model.metrics.count) daily signals are green.")
+                Text("\(model.greenCount) of \(model.metrics.filter(\.contributesToScore).count) available signals are green.")
                     .font(.subheadline)
                     .foregroundStyle(YoungerTheme.secondaryText)
                 HStack(spacing: 6) {
@@ -121,8 +121,14 @@ struct TodayView: View {
     private var metricGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             ForEach(model.metrics) { metric in
-                MetricCard(metric: metric)
+                NavigationLink(value: metric.id) {
+                    MetricCard(metric: metric)
+                }
+                .buttonStyle(.plain)
             }
+        }
+        .navigationDestination(for: String.self) { id in
+            MetricDetailView(metricID: id)
         }
     }
 
@@ -179,6 +185,9 @@ private struct MetricCard: View {
                 Circle()
                     .fill(metric.status.color)
                     .frame(width: 9, height: 9)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(YoungerTheme.secondaryText)
             }
             Text(metric.title)
                 .font(.subheadline.weight(.semibold))
@@ -187,12 +196,16 @@ private struct MetricCard: View {
                 Text(metric.formattedValue)
                     .font(.system(size: 27, weight: .bold, design: .rounded))
                     .minimumScaleFactor(0.7)
-                Text("of \(metric.formattedTarget) \(metric.unit)")
+                Text(metric.targetDescription)
                     .font(.caption)
                     .foregroundStyle(YoungerTheme.secondaryText)
             }
-            ProgressView(value: metric.progress)
-                .tint(metric.status.color)
+            if metric.contributesToScore {
+                ProgressView(value: metric.progress)
+                    .tint(metric.status.color)
+            } else {
+                Divider().overlay(YoungerTheme.divider)
+            }
             Label(metric.source.rawValue, systemImage: metric.source.icon)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(YoungerTheme.secondaryText)
@@ -200,5 +213,98 @@ private struct MetricCard: View {
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 205, alignment: .topLeading)
         .youngerCard()
+    }
+}
+
+private struct MetricDetailView: View {
+    @EnvironmentObject private var model: AppModel
+    let metricID: String
+
+    private var metric: DailyMetric? {
+        model.metrics.first(where: { $0.id == metricID })
+    }
+
+    var body: some View {
+        ZStack {
+            YoungerBackground()
+            if let metric {
+                VStack(spacing: 24) {
+                    Spacer()
+
+                    Image(systemName: metric.icon)
+                        .font(.system(size: 38, weight: .semibold))
+                        .foregroundStyle(metric.status.color)
+
+                    Text(metric.title.uppercased())
+                        .font(.caption.weight(.bold))
+                        .tracking(2)
+                        .foregroundStyle(YoungerTheme.secondaryText)
+
+                    Text(metric.formattedValue)
+                        .font(.system(size: 92, weight: .bold, design: .rounded))
+                        .minimumScaleFactor(0.45)
+                        .lineLimit(1)
+
+                    Text(metric.unit)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(YoungerTheme.secondaryText)
+
+                    VStack(spacing: 12) {
+                        Text(metric.status.label)
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(metric.status.color)
+                        Text(metric.targetDescription)
+                            .font(.headline)
+                        if metric.contributesToScore {
+                            ProgressView(value: metric.progress)
+                                .tint(metric.status.color)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(24)
+                    .youngerCard()
+
+                    Text(metric.action)
+                        .font(.title3.weight(.semibold))
+                        .multilineTextAlignment(.center)
+
+                    Spacer()
+
+                    VStack(spacing: 6) {
+                        Label(metric.source.rawValue, systemImage: metric.source.icon)
+                            .font(.subheadline.weight(.semibold))
+                        Text(availabilityText(for: metric))
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(YoungerTheme.secondaryText)
+                        Text("Updated \(model.lastUpdated.formatted(date: .omitted, time: .standard))")
+                            .font(.caption2)
+                            .foregroundStyle(YoungerTheme.secondaryText)
+                    }
+                }
+                .padding(24)
+            }
+        }
+        .navigationTitle(metric?.title ?? "Metric")
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: metricID) {
+            while !Task.isCancelled {
+                await model.refreshMetric(metricID)
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
+    }
+
+    private func availabilityText(for metric: DailyMetric) -> String {
+        if metric.value != nil {
+            return "Refreshes every 15 seconds while this page is open."
+        }
+        if metric.source == .appleHealth && !model.healthConnected {
+            return "Connect Apple Health to make this metric available."
+        }
+        if metric.source == .whoop && !model.whoopConnected {
+            return "Connect WHOOP to make this metric available."
+        }
+        return "This metric is not currently supplied by the connected source."
     }
 }

@@ -12,7 +12,7 @@ final class AppModel: ObservableObject {
     @Published var lastUpdated = Date()
     @Published var errorTitle = "Something went wrong"
     @Published var errorMessage: String?
-    @Published var useDemoData = true
+    @Published var useDemoData = false
 
     private let healthKit = HealthKitService.shared
     private let whoop = WhoopService.shared
@@ -22,27 +22,28 @@ final class AppModel: ObservableObject {
     private let healthConnectionKey = "appleHealthConnected"
 
     var score: Int {
-        let totalWeight = metrics.reduce(0) { $0 + $1.weight }
+        let scoredMetrics = metrics.filter(\.contributesToScore)
+        let totalWeight = scoredMetrics.reduce(0) { $0 + $1.weight }
         guard totalWeight > 0 else { return 0 }
-        let weighted = metrics.reduce(0) { $0 + ($1.progress * $1.weight) }
+        let weighted = scoredMetrics.reduce(0) { $0 + ($1.progress * $1.weight) }
         return Int((weighted / totalWeight * 100).rounded())
     }
 
     var greenCount: Int { metrics.filter { $0.status == .green }.count }
     var focusMetrics: [DailyMetric] {
-        metrics.filter { $0.status != .green }.sorted { $0.progress < $1.progress }
+        metrics
+            .filter { $0.contributesToScore && $0.status != .green }
+            .sorted { $0.progress < $1.progress }
     }
 
     func start() async {
         healthConnected = UserDefaults.standard.bool(forKey: healthConnectionKey)
         whoopConnected = await whoop.hasToken
-        loadDemoData()
+        loadLiveMetricTemplates()
         if healthConnected {
-            useDemoData = false
             try? await refreshHealth()
         }
         if whoopConnected {
-            useDemoData = false
             await refreshWhoop()
         }
     }
@@ -51,10 +52,13 @@ final class AppModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
+            if useDemoData {
+                loadLiveMetricTemplates()
+                useDemoData = false
+            }
             try await healthKit.requestAuthorization()
             healthConnected = true
             UserDefaults.standard.set(true, forKey: healthConnectionKey)
-            useDemoData = false
             try await refreshHealth()
         } catch {
             errorTitle = "Apple Health connection"
@@ -67,12 +71,8 @@ final class AppModel: ObservableObject {
         UserDefaults.standard.set(false, forKey: healthConnectionKey)
         latestHealthValues = nil
 
-        for id in ["steps", "activeEnergy", "exercise", "stand", "mindful"] {
-            replaceMetric(id, value: 0, source: .appleHealth)
-        }
-        if !whoopConnected {
-            replaceMetric("sleep", value: 0, source: .appleHealth)
-            replaceMetric("zoneMinutes", value: 0, source: .appleHealth)
+        for id in ["steps", "vo2Max", "leanBodyMass"] {
+            replaceMetric(id, value: nil, source: .appleHealth)
         }
         rebuildDataPoints(health: nil, whoop: whoopConnected ? latestWhoopSnapshot : nil)
     }
@@ -81,10 +81,13 @@ final class AppModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
+            if useDemoData {
+                loadLiveMetricTemplates()
+                useDemoData = false
+            }
             let ticket = try await whoopOAuth.authenticate()
             try await whoop.exchangeTicket(ticket)
             whoopConnected = true
-            useDemoData = false
             await refreshWhoop()
         } catch {
             errorTitle = "WHOOP connection"
@@ -95,7 +98,11 @@ final class AppModel: ObservableObject {
     func disconnectWhoop() async {
         await whoop.disconnect()
         whoopConnected = false
-        loadDemoData()
+        latestWhoopSnapshot = nil
+        for id in ["sleepConsistency", "sleep", "zoneOneToThree", "zoneFourToFive", "strength", "restingHeartRate"] {
+            replaceMetric(id, value: nil, source: .whoop)
+        }
+        rebuildDataPoints(health: healthConnected ? latestHealthValues : nil, whoop: nil)
     }
 
     func refresh() async {
@@ -115,9 +122,28 @@ final class AppModel: ObservableObject {
         lastUpdated = Date()
     }
 
+    func refreshMetric(_ id: String) async {
+        if let metric = metrics.first(where: { $0.id == id }) {
+            switch metric.source {
+            case .appleHealth where healthConnected:
+                try? await refreshHealth()
+            case .whoop where whoopConnected:
+                await refreshWhoop()
+            default:
+                break
+            }
+        }
+        lastUpdated = Date()
+    }
+
     func toggleDemo(_ enabled: Bool) {
         useDemoData = enabled
-        if enabled { loadDemoData() }
+        if enabled {
+            loadDemoData()
+        } else {
+            loadLiveMetricTemplates()
+            Task { await refresh() }
+        }
     }
 
     func updateTarget(for id: String, to target: Double) {
@@ -128,12 +154,8 @@ final class AppModel: ObservableObject {
     private func refreshHealth() async throws {
         let values = try await healthKit.fetchToday()
         replaceMetric("steps", value: values["steps"])
-        replaceMetric("activeEnergy", value: values["activeEnergy"])
-        replaceMetric("exercise", value: values["exerciseMinutes"])
-        replaceMetric("stand", value: values["standHours"])
-        replaceMetric("sleep", value: values["sleepHours"])
-        replaceMetric("zoneMinutes", value: values["zoneMinutes"])
-        replaceMetric("mindful", value: values["mindfulMinutes"])
+        replaceMetric("vo2Max", value: values["vo2Max"])
+        replaceMetric("leanBodyMass", value: values["leanBodyMass"])
         latestHealthValues = values
         rebuildDataPoints(health: latestHealthValues, whoop: latestWhoopSnapshot)
     }
@@ -141,9 +163,12 @@ final class AppModel: ObservableObject {
     private func refreshWhoop() async {
         do {
             let snapshot = try await whoop.fetchSnapshot()
-            replaceMetric("recovery", value: snapshot.recoveryScore)
-            replaceMetric("sleep", value: snapshot.sleepHours, source: .whoop)
-            replaceMetric("zoneMinutes", value: snapshot.zoneMinutes, source: .whoop)
+            replaceMetric("sleepConsistency", value: snapshot.sleepConsistency)
+            replaceMetric("sleep", value: snapshot.sleepHours)
+            replaceMetric("zoneOneToThree", value: snapshot.zoneOneToThreeMinutes)
+            replaceMetric("zoneFourToFive", value: snapshot.zoneFourToFiveMinutes)
+            replaceMetric("strength", value: snapshot.strengthMinutes)
+            replaceMetric("restingHeartRate", value: snapshot.restingHeartRate)
             latestWhoopSnapshot = snapshot
             rebuildDataPoints(health: latestHealthValues, whoop: latestWhoopSnapshot)
         } catch {
@@ -153,29 +178,45 @@ final class AppModel: ObservableObject {
     }
 
     private func replaceMetric(_ id: String, value: Double?, source: MetricSource? = nil) {
-        guard let value, value >= 0, let index = metrics.firstIndex(where: { $0.id == id }) else { return }
+        guard value.map({ $0 >= 0 }) ?? true,
+              let index = metrics.firstIndex(where: { $0.id == id }) else { return }
         var metric = metrics[index]
         metric.value = value
         if let source {
             metric = DailyMetric(
                 id: metric.id, title: metric.title, category: metric.category, source: source,
                 value: value, target: metric.target, unit: metric.unit, weight: metric.weight,
-                icon: metric.icon, action: metric.action, decimals: metric.decimals
+                icon: metric.icon, action: metric.action, decimals: metric.decimals, goal: metric.goal
             )
         }
         metrics[index] = metric
     }
 
+    private func loadLiveMetricTemplates() {
+        metrics = [
+            DailyMetric(id: "sleepConsistency", title: "Sleep consistency", category: .sleep, source: .whoop, value: nil, target: 85, unit: "%", weight: 1.2, icon: "bed.double.fill", action: "Keep bedtime and wake time close to your usual schedule."),
+            DailyMetric(id: "sleep", title: "Hours of sleep", category: .sleep, source: .whoop, value: nil, target: 7, unit: "hours", weight: 1.2, icon: "moon.fill", action: "Protect enough time for at least 7 hours of sleep.", decimals: 1),
+            DailyMetric(id: "steps", title: "Steps", category: .move, source: .appleHealth, value: nil, target: 10_000, unit: "steps", weight: 1, icon: "figure.walk", action: "Add a walk today to close your step gap."),
+            DailyMetric(id: "zoneOneToThree", title: "HR zones 1–3", category: .move, source: .whoop, value: nil, target: 38, unit: "min", weight: 1, icon: "figure.run", action: "Build easy-to-moderate aerobic time today."),
+            DailyMetric(id: "zoneFourToFive", title: "HR zones 4–5", category: .move, source: .whoop, value: nil, target: 9, unit: "min", weight: 1, icon: "bolt.heart.fill", action: "Add a short hard effort if recovery supports it."),
+            DailyMetric(id: "strength", title: "Strength activity", category: .move, source: .whoop, value: nil, target: 26, unit: "min", weight: 1, icon: "dumbbell.fill", action: "Log strength work in WHOOP today."),
+            DailyMetric(id: "vo2Max", title: "VO₂ max", category: .recover, source: .appleHealth, value: nil, target: 45, unit: "ml/kg/min", weight: 1.3, icon: "lungs.fill", action: "VO₂ max changes slowly; use zone 4–5 work to train it.", decimals: 1),
+            DailyMetric(id: "restingHeartRate", title: "Resting heart rate", category: .recover, source: .whoop, value: nil, target: 60, unit: "bpm", weight: 1.1, icon: "heart.fill", action: "Recovery, sleep, and aerobic fitness can improve resting heart rate.", goal: .atMost),
+            DailyMetric(id: "leanBodyMass", title: "Lean body mass", category: .recover, source: .appleHealth, value: nil, target: 0, unit: "kg", weight: 0, icon: "figure.strengthtraining.traditional", action: "Track the trend and support it with resistance training and nutrition.", decimals: 1, goal: .informational)
+        ]
+    }
+
     private func loadDemoData() {
         metrics = [
-            DailyMetric(id: "recovery", title: "Recovery", category: .recover, source: .whoop, value: 72, target: 67, unit: "%", weight: 1.4, icon: "heart.fill", action: "Protect your recovery with a lighter evening."),
-            DailyMetric(id: "sleep", title: "Sleep", category: .sleep, source: .whoop, value: 7.3, target: 8, unit: "hours", weight: 1.4, icon: "moon.fill", action: "Aim for 42 more minutes tonight.", decimals: 1),
-            DailyMetric(id: "steps", title: "Steps", category: .move, source: .appleHealth, value: 4_286, target: 10_000, unit: "steps", weight: 1.1, icon: "figure.walk", action: "A 38-minute walk closes most of this gap."),
-            DailyMetric(id: "zoneMinutes", title: "Heart zones", category: .move, source: .appleHealth, value: 18, target: 30, unit: "min", weight: 1.2, icon: "waveform.path.ecg", action: "Add 12 minutes in zone 2 or higher."),
-            DailyMetric(id: "activeEnergy", title: "Active energy", category: .move, source: .appleHealth, value: 410, target: 600, unit: "kcal", weight: 0.8, icon: "flame.fill", action: "One brisk walk adds about 150 calories."),
-            DailyMetric(id: "exercise", title: "Exercise", category: .move, source: .appleHealth, value: 32, target: 45, unit: "min", weight: 0.8, icon: "figure.strengthtraining.traditional", action: "Move with intent for 13 more minutes."),
-            DailyMetric(id: "stand", title: "Stand", category: .move, source: .appleHealth, value: 9, target: 12, unit: "hours", weight: 0.5, icon: "figure.stand", action: "Stand and move during 3 more hours."),
-            DailyMetric(id: "mindful", title: "Reset", category: .mind, source: .appleHealth, value: 10, target: 10, unit: "min", weight: 0.6, icon: "wind", action: "Your nervous-system reset is complete.")
+            DailyMetric(id: "sleepConsistency", title: "Sleep consistency", category: .sleep, source: .whoop, value: 79, target: 85, unit: "%", weight: 1.2, icon: "bed.double.fill", action: "Keep bedtime and wake time close to your usual schedule."),
+            DailyMetric(id: "sleep", title: "Hours of sleep", category: .sleep, source: .whoop, value: 7.5, target: 7, unit: "hours", weight: 1.2, icon: "moon.fill", action: "Protect enough time for at least 7 hours of sleep.", decimals: 1),
+            DailyMetric(id: "steps", title: "Steps", category: .move, source: .appleHealth, value: 4_286, target: 10_000, unit: "steps", weight: 1, icon: "figure.walk", action: "Add a walk today to close your step gap."),
+            DailyMetric(id: "zoneOneToThree", title: "HR zones 1–3", category: .move, source: .whoop, value: 28, target: 38, unit: "min", weight: 1, icon: "figure.run", action: "Build easy-to-moderate aerobic time today."),
+            DailyMetric(id: "zoneFourToFive", title: "HR zones 4–5", category: .move, source: .whoop, value: 4, target: 9, unit: "min", weight: 1, icon: "bolt.heart.fill", action: "Add a short hard effort if recovery supports it."),
+            DailyMetric(id: "strength", title: "Strength activity", category: .move, source: .whoop, value: 20, target: 26, unit: "min", weight: 1, icon: "dumbbell.fill", action: "Log strength work in WHOOP today."),
+            DailyMetric(id: "vo2Max", title: "VO₂ max", category: .recover, source: .appleHealth, value: 46.8, target: 45, unit: "ml/kg/min", weight: 1.3, icon: "lungs.fill", action: "VO₂ max changes slowly; use zone 4–5 work to train it.", decimals: 1),
+            DailyMetric(id: "restingHeartRate", title: "Resting heart rate", category: .recover, source: .whoop, value: 52, target: 60, unit: "bpm", weight: 1.1, icon: "heart.fill", action: "Recovery, sleep, and aerobic fitness can improve resting heart rate.", goal: .atMost),
+            DailyMetric(id: "leanBodyMass", title: "Lean body mass", category: .recover, source: .appleHealth, value: 62.5, target: 0, unit: "kg", weight: 0, icon: "figure.strengthtraining.traditional", action: "Track the trend and support it with resistance training and nutrition.", decimals: 1, goal: .informational)
         ]
 
         trend = (0..<14).map { offset in
@@ -188,12 +229,15 @@ final class AppModel: ObservableObject {
             "steps": 4286, "activeEnergy": 410, "exerciseMinutes": 32, "standHours": 9,
             "distance": 3.4, "flights": 6, "mindfulMinutes": 10, "sleepHours": 7.3,
             "hrv": 54, "restingHeartRate": 52, "respiratoryRate": 14.2,
-            "oxygenSaturation": 97.4, "vo2Max": 46.8, "zoneMinutes": 18
+            "oxygenSaturation": 97.4, "vo2Max": 46.8, "leanBodyMass": 62.5,
+            "zoneMinutes": 18
         ]
         latestWhoopSnapshot = WhoopSnapshot(
             recoveryScore: 72, strain: 8.6, sleepHours: 7.3, sleepPerformance: 86,
             hrv: 54, restingHeartRate: 52, respiratoryRate: 14.2,
-            oxygenSaturation: 97.4, skinTemperature: 33.6, zoneMinutes: 18
+            oxygenSaturation: 97.4, skinTemperature: 33.6, zoneMinutes: 32,
+            sleepConsistency: 79, zoneOneToThreeMinutes: 28,
+            zoneFourToFiveMinutes: 4, strengthMinutes: 20
         )
         rebuildDataPoints(health: latestHealthValues, whoop: latestWhoopSnapshot)
     }
