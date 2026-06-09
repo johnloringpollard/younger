@@ -205,7 +205,7 @@ export const whoopSnapshot = onRequest(
 );
 
 export const whoopDisconnect = onRequest(
-  publicOptions,
+  {...publicOptions, secrets: [whoopClientId, whoopClientSecret]},
   async (request, response) => {
     if (request.method !== "POST") {
       sendJson(response, 405, {error: "method_not_allowed"});
@@ -218,15 +218,30 @@ export const whoopDisconnect = onRequest(
       return;
     }
 
-    const sessionReference = db.collection("whoopSessions").doc(hashToken(sessionToken));
-    const session = await sessionReference.get();
-    const connectionId = session.data()?.connectionId as string | undefined;
+    const authenticated = await authenticatedConnection(
+      request.headers.authorization,
+    );
+    if (!authenticated) {
+      sendJson(response, 401, {error: "unauthorized"});
+      return;
+    }
 
+    try {
+      const accessToken = await validAccessToken(
+        authenticated.id,
+        authenticated.data,
+      );
+      await revokeWhoopAccess(accessToken);
+    } catch (error) {
+      console.error("WHOOP revocation failed", error);
+      sendJson(response, 502, {error: "whoop_revocation_failed"});
+      return;
+    }
+
+    const sessionReference = db.collection("whoopSessions").doc(hashToken(sessionToken));
     const batch = db.batch();
     batch.delete(sessionReference);
-    if (connectionId) {
-      batch.delete(db.collection("whoopConnections").doc(connectionId));
-    }
+    batch.delete(db.collection("whoopConnections").doc(authenticated.id));
     await batch.commit();
     response.status(204).send();
   },
@@ -329,6 +344,19 @@ async function whoopRequest(path: string, accessToken: string): Promise<unknown>
     throw new Error(`WHOOP API returned ${result.status} for ${path}`);
   }
   return result.json();
+}
+
+async function revokeWhoopAccess(accessToken: string): Promise<void> {
+  const result = await fetch(`${whoopApiBase}/user/access`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+  if (!result.ok && result.status !== 404) {
+    throw new Error(`WHOOP revocation returned ${result.status}`);
+  }
 }
 
 function buildSnapshot(
