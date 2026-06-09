@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081219">
+  <title>WHOOP connected · Younger</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell compact">
+    <div class="mark" id="mark" aria-hidden="true">✓</div>
+    <p class="eyebrow">WHOOP CONNECTION</p>
+    <h1 id="title">You’re connected.</h1>
+    <p class="lede" id="message">Return to Younger to see today’s recovery, sleep, strain, and heart-zone progress.</p>
+    <a class="button" id="open-app" href="younger://oauth">Open Younger</a>
+    <p class="footnote">This ticket expires quickly and can only be used once.</p>
+  </main>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const ticket = params.get("ticket");
+    const error = params.get("error");
+    const openButton = document.getElementById("open-app");
+
+    if (error || !ticket) {
+      document.getElementById("mark").textContent = "!";
+      document.getElementById("title").textContent = "Connection wasn’t completed.";
+      document.getElementById("message").textContent =
+        "Return to Younger and try connecting WHOOP again.";
+      openButton.href = "younger://oauth?error=" + encodeURIComponent(error || "missing_ticket");
+    } else {
+      openButton.href = "younger://oauth?ticket=" + encodeURIComponent(ticket);
+      window.setTimeout(() => window.location.assign(openButton.href), 250);
+    }
+  </script>
+</body>
+</html>

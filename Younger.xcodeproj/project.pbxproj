@@ -1,0 +1,150 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* YoungerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* YoungerApp.swift */; };
+		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* AppModel.swift */; };
+		A10000000000000000000003 /* DailyMetric.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* DailyMetric.swift */; };
+		A10000000000000000000004 /* YoungerTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* YoungerTheme.swift */; };
+		A10000000000000000000005 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* HealthKitService.swift */; };
+		A10000000000000000000006 /* WhoopService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* WhoopService.swift */; };
+		A10000000000000000000007 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* RootView.swift */; };
+		A10000000000000000000008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* TodayView.swift */; };
+		A10000000000000000000009 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* TrendsView.swift */; };
+		A1000000000000000000000A /* DataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* DataView.swift */; };
+		A1000000000000000000000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* SettingsView.swift */; };
+		A1000000000000000000000C /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* HealthKit.framework */; };
+		A1000000000000000000000D /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* AppIcon.png */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B10000000000000000000001 /* YoungerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YoungerApp.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* DailyMetric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMetric.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* YoungerTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YoungerTheme.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
+		B10000000000000000000006 /* WhoopService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhoopService.swift; sourceTree = "<group>"; };
+		B10000000000000000000007 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B10000000000000000000008 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		B10000000000000000000009 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000A /* DataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B1000000000000000000000D /* Younger.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Younger.entitlements; sourceTree = "<group>"; };
+		B1000000000000000000000E /* Younger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Younger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000000000000000000000F /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
+		B10000000000000000000010 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C10000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (A1000000000000000000000C /* HealthKit.framework in Frameworks */,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D10000000000000000000001 = {
+			isa = PBXGroup;
+			children = (D10000000000000000000002 /* Younger */, D10000000000000000000008 /* Frameworks */, D10000000000000000000007 /* Products */);
+			sourceTree = "<group>";
+		};
+		D10000000000000000000002 /* Younger */ = {
+			isa = PBXGroup;
+			path = Younger;
+			sourceTree = "<group>";
+			children = (
+				B10000000000000000000001 /* YoungerApp.swift */,
+				B10000000000000000000002 /* AppModel.swift */,
+				D10000000000000000000003 /* Models */,
+				D10000000000000000000004 /* Design */,
+				D10000000000000000000005 /* Services */,
+				D10000000000000000000006 /* Views */,
+				D10000000000000000000009 /* Resources */,
+			);
+		};
+		D10000000000000000000003 /* Models */ = {isa = PBXGroup; path = Models; sourceTree = "<group>"; children = (B10000000000000000000003 /* DailyMetric.swift */,);};
+		D10000000000000000000004 /* Design */ = {isa = PBXGroup; path = Design; sourceTree = "<group>"; children = (B10000000000000000000004 /* YoungerTheme.swift */,);};
+		D10000000000000000000005 /* Services */ = {isa = PBXGroup; path = Services; sourceTree = "<group>"; children = (B10000000000000000000005 /* HealthKitService.swift */, B10000000000000000000006 /* WhoopService.swift */,);};
+		D10000000000000000000006 /* Views */ = {isa = PBXGroup; path = Views; sourceTree = "<group>"; children = (B10000000000000000000007 /* RootView.swift */, B10000000000000000000008 /* TodayView.swift */, B10000000000000000000009 /* TrendsView.swift */, B1000000000000000000000A /* DataView.swift */, B1000000000000000000000B /* SettingsView.swift */,);};
+		D10000000000000000000007 /* Products */ = {isa = PBXGroup; children = (B1000000000000000000000E /* Younger.app */,); name = Products; sourceTree = "<group>";};
+		D10000000000000000000008 /* Frameworks */ = {isa = PBXGroup; children = (B1000000000000000000000F /* HealthKit.framework */,); name = Frameworks; sourceTree = "<group>";};
+		D10000000000000000000009 /* Resources */ = {isa = PBXGroup; path = Resources; sourceTree = "<group>"; children = (B10000000000000000000010 /* AppIcon.png */, B1000000000000000000000C /* Info.plist */, B1000000000000000000000D /* Younger.entitlements */,);};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E10000000000000000000001 /* Younger */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000000002 /* Build configuration list for PBXNativeTarget "Younger" */;
+			buildPhases = (C10000000000000000000003 /* Sources */, C10000000000000000000001 /* Frameworks */, C10000000000000000000002 /* Resources */,);
+			buildRules = ();
+			dependencies = ();
+			name = Younger;
+			productName = Younger;
+			productReference = B1000000000000000000000E /* Younger.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E10000000000000000000002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2650; LastUpgradeCheck = 2650; TargetAttributes = {E10000000000000000000001 = {CreatedOnToolsVersion = 26.5;};};};
+			buildConfigurationList = F10000000000000000000001 /* Build configuration list for PBXProject "Younger" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = D10000000000000000000001;
+			productRefGroup = D10000000000000000000007 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (E10000000000000000000001 /* Younger */,);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C10000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000D /* AppIcon.png in Resources */,); runOnlyForDeploymentPostprocessing = 0;};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C10000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* YoungerApp.swift in Sources */,
+				A10000000000000000000002 /* AppModel.swift in Sources */,
+				A10000000000000000000003 /* DailyMetric.swift in Sources */,
+				A10000000000000000000004 /* YoungerTheme.swift in Sources */,
+				A10000000000000000000005 /* HealthKitService.swift in Sources */,
+				A10000000000000000000006 /* WhoopService.swift in Sources */,
+				A10000000000000000000007 /* RootView.swift in Sources */,
+				A10000000000000000000008 /* TodayView.swift in Sources */,
+				A10000000000000000000009 /* TrendsView.swift in Sources */,
+				A1000000000000000000000A /* DataView.swift in Sources */,
+				A1000000000000000000000B /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F20000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_OPTIMIZATION_LEVEL = 0; GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)"); IPHONEOS_DEPLOYMENT_TARGET = 17.0; MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE; ONLY_ACTIVE_ARCH = YES; SDKROOT = iphoneos; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone";}; name = Debug;};
+		F20000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_NS_ASSERTIONS = NO; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MTL_ENABLE_DEBUG_INFO = NO; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; VALIDATE_PRODUCT = YES;}; name = Release;};
+		F20000000000000000000003 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES; CODE_SIGN_ENTITLEMENTS = Younger/Resources/Younger.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Younger/Resources/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = com.younger.app; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1;}; name = Debug;};
+		F20000000000000000000004 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES; CODE_SIGN_ENTITLEMENTS = Younger/Resources/Younger.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Younger/Resources/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = com.younger.app; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1;}; name = Release;};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F10000000000000000000001 /* Build configuration list for PBXProject "Younger" */ = {isa = XCConfigurationList; buildConfigurations = (F20000000000000000000001 /* Debug */, F20000000000000000000002 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+		F10000000000000000000002 /* Build configuration list for PBXNativeTarget "Younger" */ = {isa = XCConfigurationList; buildConfigurations = (F20000000000000000000003 /* Debug */, F20000000000000000000004 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+/* End XCConfigurationList section */
+	};
+	rootObject = E10000000000000000000002 /* Project object */;
+}

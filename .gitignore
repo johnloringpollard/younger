@@ -1,0 +1,8 @@
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
