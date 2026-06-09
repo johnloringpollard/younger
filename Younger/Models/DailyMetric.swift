@@ -58,7 +58,7 @@ enum MetricStatus {
     }
 }
 
-enum MetricGoal {
+enum MetricGoal: Codable {
     case atLeast
     case atMost
     case informational
@@ -77,6 +77,9 @@ struct DailyMetric: Identifiable {
     let action: String
     var decimals: Int = 0
     var goal: MetricGoal = .atLeast
+    var updatedAt: Date?
+    var weeklyTarget: Double?
+    var weeklyValue: Double?
 
     var contributesToScore: Bool {
         value != nil && target > 0 && goal != .informational
@@ -130,6 +133,29 @@ struct DailyMetric: Identifiable {
         case .informational: "Track over time"
         }
     }
+
+    var freshnessText: String {
+        guard let updatedAt else { return "Waiting for data" }
+        let seconds = Date().timeIntervalSince(updatedAt)
+        if seconds < 30 { return "Live" }
+        if seconds < 120 { return "Updated 1 minute ago" }
+        if seconds < 3_600 { return "Updated \(Int(seconds / 60)) minutes ago" }
+        if Calendar.current.isDateInToday(updatedAt) {
+            return "Updated \(updatedAt.formatted(date: .omitted, time: .shortened))"
+        }
+        return "Updated \(updatedAt.formatted(date: .abbreviated, time: .shortened))"
+    }
+
+    var weeklyPaceDescription: String? {
+        guard let weeklyValue, let weeklyTarget, weeklyTarget > 0 else { return nil }
+        let weekday = Calendar.current.component(.weekday, from: Date())
+        let mondayBasedDay = (weekday + 5) % 7 + 1
+        let expected = weeklyTarget * Double(mondayBasedDay) / 7
+        let delta = weeklyValue - expected
+        if abs(delta) < weeklyTarget * 0.05 { return "On weekly pace" }
+        if delta > 0 { return "Ahead of weekly pace" }
+        return "Behind weekly pace"
+    }
 }
 
 struct TrendDay: Identifiable {
@@ -162,4 +188,87 @@ struct WhoopSnapshot {
     var zoneOneToThreeMinutes: Double?
     var zoneFourToFiveMinutes: Double?
     var strengthMinutes: Double?
+    var weeklyZoneOneToThreeMinutes: Double?
+    var weeklyZoneFourToFiveMinutes: Double?
+    var weeklyStrengthMinutes: Double?
+}
+
+struct MetricHistoryPoint: Identifiable, Codable {
+    var id: String { "\(metricID)-\(date.timeIntervalSince1970)" }
+    let metricID: String
+    let date: Date
+    let value: Double
+}
+
+struct DailyAction: Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let icon: String
+    let color: Color
+    let priority: Int
+}
+
+struct HealthNotice: Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let icon: String
+    let color: Color
+}
+
+enum WorkoutKind: String, CaseIterable, Identifiable {
+    case zoneTwo = "Zone 2"
+    case intervals = "VO₂ intervals"
+    case recovery = "Recovery walk"
+    case strength = "Strength"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .zoneTwo: "figure.run"
+        case .intervals: "bolt.heart.fill"
+        case .recovery: "figure.walk"
+        case .strength: "dumbbell.fill"
+        }
+    }
+
+    var targetZones: ClosedRange<Int> {
+        switch self {
+        case .zoneTwo: 2...2
+        case .intervals: 4...5
+        case .recovery: 0...1
+        case .strength: 1...3
+        }
+    }
+
+    var durationMinutes: Int {
+        switch self {
+        case .zoneTwo: 30
+        case .intervals: 24
+        case .recovery: 20
+        case .strength: 30
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .zoneTwo: "Steady aerobic work"
+        case .intervals: "Hard efforts with recovery"
+        case .recovery: "Easy movement only"
+        case .strength: "Track lifting time and pulse"
+        }
+    }
+}
+
+struct WorkoutSummary: Identifiable, Codable {
+    let id: UUID
+    let kindName: String
+    let startedAt: Date
+    let duration: TimeInterval
+    let averageHeartRate: Double
+    let maximumHeartRate: Double
+    let zoneSeconds: [Int: TimeInterval]
+    let recoveryHeartRate: Double?
 }

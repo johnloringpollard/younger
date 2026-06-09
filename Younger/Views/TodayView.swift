@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct TodayView: View {
     @EnvironmentObject private var model: AppModel
@@ -7,8 +8,11 @@ struct TodayView: View {
         ScrollView {
             LazyVStack(spacing: 18) {
                 header
+                contextCard
+                dailyPlanCard
                 scoreCard
-                focusCard
+                weeklyPaceCard
+                notices
                 metricGrid
                 disclaimer
             }
@@ -26,6 +30,62 @@ struct TodayView: View {
         } message: {
             Text(model.errorMessage ?? "")
         }
+    }
+
+    private var contextCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(model.dayModeTitle, systemImage: contextIcon)
+                .font(.headline)
+                .foregroundStyle(YoungerTheme.mint)
+            Text(model.dayModeDetail)
+                .font(.title3.weight(.semibold))
+            Text(model.trainingRecommendation)
+                .font(.caption)
+                .foregroundStyle(YoungerTheme.secondaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .youngerCard()
+    }
+
+    private var contextIcon: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 5..<11: "sunrise.fill"
+        case 11..<18: "sun.max.fill"
+        default: "moon.stars.fill"
+        }
+    }
+
+    private var dailyPlanCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Today’s plan", systemImage: "list.bullet.clipboard.fill")
+                    .font(.headline)
+                Spacer()
+                Text("IN ORDER")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(YoungerTheme.secondaryText)
+            }
+            ForEach(Array(model.dailyActions.enumerated()), id: \.element.id) { index, action in
+                HStack(alignment: .top, spacing: 12) {
+                    Text("\(index + 1)")
+                        .font(.headline)
+                        .foregroundStyle(action.color)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(action.color.opacity(0.14)))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(action.title).font(.headline)
+                        Text(action.detail)
+                            .font(.caption)
+                            .foregroundStyle(YoungerTheme.secondaryText)
+                    }
+                    Spacer()
+                    Image(systemName: action.icon).foregroundStyle(action.color)
+                }
+            }
+        }
+        .padding(20)
+        .youngerCard()
     }
 
     private var header: some View {
@@ -82,6 +142,65 @@ struct TodayView: View {
         case 85...: "You’re building a strong day."
         case 65...: "A few choices can turn today green."
         default: "Your body is asking for attention."
+        }
+    }
+
+    @ViewBuilder
+    private var weeklyPaceCard: some View {
+        let paced = model.visibleMetrics.filter { $0.weeklyPaceDescription != nil }
+        if !paced.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Weekly pace", systemImage: "calendar.badge.clock")
+                    .font(.headline)
+                ForEach(paced) { metric in
+                    VStack(alignment: .leading, spacing: 7) {
+                        HStack {
+                            Label(metric.title, systemImage: metric.icon)
+                            Spacer()
+                            Text(metric.weeklyPaceDescription ?? "")
+                                .foregroundStyle(metric.status.color)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        ProgressView(
+                            value: metric.weeklyValue ?? 0,
+                            total: metric.weeklyTarget ?? 1
+                        )
+                        .tint(metric.status.color)
+                        Text("\((metric.weeklyValue ?? 0).formatted(.number.precision(.fractionLength(0)))) of \((metric.weeklyTarget ?? 0).formatted(.number.precision(.fractionLength(0)))) \(metric.unit) this week")
+                            .font(.caption)
+                            .foregroundStyle(YoungerTheme.secondaryText)
+                    }
+                }
+                Text("A rest day can still be on plan. Weekly pace matters more than forcing every target daily.")
+                    .font(.caption)
+                    .foregroundStyle(YoungerTheme.secondaryText)
+            }
+            .padding(20)
+            .youngerCard()
+        }
+    }
+
+    @ViewBuilder
+    private var notices: some View {
+        if !model.healthNotices.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Signals to watch", systemImage: "exclamationmark.triangle.fill")
+                    .font(.headline)
+                    .foregroundStyle(YoungerTheme.gold)
+                ForEach(model.healthNotices) { notice in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: notice.icon).foregroundStyle(notice.color)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(notice.title).font(.subheadline.weight(.bold))
+                            Text(notice.detail)
+                                .font(.caption)
+                                .foregroundStyle(YoungerTheme.secondaryText)
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .youngerCard()
         }
     }
 
@@ -209,6 +328,9 @@ private struct MetricCard: View {
             Label(metric.source.rawValue, systemImage: metric.source.icon)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(YoungerTheme.secondaryText)
+            Text(metric.freshnessText)
+                .font(.caption2)
+                .foregroundStyle(YoungerTheme.secondaryText)
         }
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 205, alignment: .topLeading)
@@ -228,61 +350,63 @@ private struct MetricDetailView: View {
         ZStack {
             YoungerBackground()
             if let metric {
-                VStack(spacing: 24) {
-                    Spacer()
+                ScrollView {
+                    VStack(spacing: 24) {
+                        Spacer(minLength: 20)
 
-                    Image(systemName: metric.icon)
-                        .font(.system(size: 38, weight: .semibold))
-                        .foregroundStyle(metric.status.color)
-
-                    Text(metric.title.uppercased())
-                        .font(.caption.weight(.bold))
-                        .tracking(2)
-                        .foregroundStyle(YoungerTheme.secondaryText)
-
-                    Text(metric.formattedValue)
-                        .font(.system(size: 92, weight: .bold, design: .rounded))
-                        .minimumScaleFactor(0.45)
-                        .lineLimit(1)
-
-                    Text(metric.unit)
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(YoungerTheme.secondaryText)
-
-                    VStack(spacing: 12) {
-                        Text(metric.status.label)
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                        Image(systemName: metric.icon)
+                            .font(.system(size: 38, weight: .semibold))
                             .foregroundStyle(metric.status.color)
-                        Text(metric.targetDescription)
-                            .font(.headline)
-                        if metric.contributesToScore {
-                            ProgressView(value: metric.progress)
-                                .tint(metric.status.color)
+
+                        Text(metric.title.uppercased())
+                            .font(.caption.weight(.bold))
+                            .tracking(2)
+                            .foregroundStyle(YoungerTheme.secondaryText)
+
+                        Text(metric.formattedValue)
+                            .font(.system(size: 92, weight: .bold, design: .rounded))
+                            .minimumScaleFactor(0.45)
+                            .lineLimit(1)
+
+                        Text(metric.unit)
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(YoungerTheme.secondaryText)
+
+                        VStack(spacing: 12) {
+                            Text(metric.status.label)
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
+                                .foregroundStyle(metric.status.color)
+                            Text(metric.targetDescription)
+                                .font(.headline)
+                            if metric.contributesToScore {
+                                ProgressView(value: metric.progress)
+                                    .tint(metric.status.color)
+                            }
                         }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(24)
-                    .youngerCard()
+                        .frame(maxWidth: .infinity)
+                        .padding(24)
+                        .youngerCard()
 
-                    Text(metric.action)
-                        .font(.title3.weight(.semibold))
-                        .multilineTextAlignment(.center)
-
-                    Spacer()
-
-                    VStack(spacing: 6) {
-                        Label(metric.source.rawValue, systemImage: metric.source.icon)
-                            .font(.subheadline.weight(.semibold))
-                        Text(availabilityText(for: metric))
-                            .font(.caption)
+                        Text(metric.action)
+                            .font(.title3.weight(.semibold))
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(YoungerTheme.secondaryText)
-                        Text("Updated \(model.lastUpdated.formatted(date: .omitted, time: .standard))")
-                            .font(.caption2)
-                            .foregroundStyle(YoungerTheme.secondaryText)
+
+                        VStack(spacing: 6) {
+                            Label(metric.source.rawValue, systemImage: metric.source.icon)
+                                .font(.subheadline.weight(.semibold))
+                            Text(availabilityText(for: metric))
+                                .font(.caption)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(YoungerTheme.secondaryText)
+                            Text(metric.freshnessText)
+                                .font(.caption2)
+                                .foregroundStyle(YoungerTheme.secondaryText)
+                        }
+
+                        historySection(metric)
                     }
+                    .padding(24)
                 }
-                .padding(24)
             }
         }
         .navigationTitle(metric?.title ?? "Metric")
@@ -292,6 +416,42 @@ private struct MetricDetailView: View {
                 await model.refreshMetric(metricID)
                 try? await Task.sleep(for: .seconds(15))
             }
+        }
+    }
+
+    @ViewBuilder
+    private func historySection(_ metric: DailyMetric) -> some View {
+        let history = model.history(for: metric.id, days: 30)
+        if history.count >= 2 {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("30-DAY TREND")
+                    .font(.caption.weight(.bold))
+                    .tracking(1.4)
+                    .foregroundStyle(YoungerTheme.secondaryText)
+                Chart(history) { point in
+                    LineMark(
+                        x: .value("Day", point.date),
+                        y: .value(metric.title, point.value)
+                    )
+                    .foregroundStyle(metric.status.color)
+                    PointMark(
+                        x: .value("Day", point.date),
+                        y: .value(metric.title, point.value)
+                    )
+                    .foregroundStyle(metric.status.color)
+                }
+                .frame(height: 130)
+                Text(metric.weeklyPaceDescription ?? "Daily history builds each time Younger refreshes.")
+                    .font(.caption)
+                    .foregroundStyle(YoungerTheme.secondaryText)
+            }
+            .padding(18)
+            .youngerCard()
+        } else {
+            Text("Trend history will appear after Younger records this metric on multiple days.")
+                .font(.caption)
+                .foregroundStyle(YoungerTheme.secondaryText)
+                .multilineTextAlignment(.center)
         }
     }
 

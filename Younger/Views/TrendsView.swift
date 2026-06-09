@@ -16,60 +16,80 @@ struct TrendsView: View {
 
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text("\(Int(model.trend.map(\.score).reduce(0, +) / Double(max(model.trend.count, 1))))")
+                        Text("\(trendAverage)")
                             .font(.system(size: 42, weight: .bold, design: .rounded))
-                        Text("14-day average")
+                        Text("recorded-day average")
                             .foregroundStyle(YoungerTheme.secondaryText)
                         Spacer()
-                        Label("+6", systemImage: "arrow.up.right")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(YoungerTheme.mint)
+                        Text("\(model.trend.count) days")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(YoungerTheme.secondaryText)
                     }
 
-                    Chart(model.trend) { day in
-                        AreaMark(
-                            x: .value("Day", day.date),
-                            y: .value("Score", day.score)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(colors: [YoungerTheme.mint.opacity(0.32), .clear], startPoint: .top, endPoint: .bottom)
-                        )
-                        LineMark(
-                            x: .value("Day", day.date),
-                            y: .value("Score", day.score)
-                        )
-                        .foregroundStyle(YoungerTheme.mint)
-                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
-                    }
-                    .chartYScale(domain: 40...100)
-                    .chartYAxis {
-                        AxisMarks(values: [50, 75, 100]) {
-                            AxisGridLine().foregroundStyle(Color.white.opacity(0.08))
-                            AxisValueLabel().foregroundStyle(YoungerTheme.secondaryText)
+                    if model.trend.count >= 2 {
+                        Chart(model.trend) { day in
+                            AreaMark(
+                                x: .value("Day", day.date),
+                                y: .value("Score", day.score)
+                            )
+                            .foregroundStyle(
+                                LinearGradient(colors: [YoungerTheme.mint.opacity(0.32), .clear], startPoint: .top, endPoint: .bottom)
+                            )
+                            LineMark(
+                                x: .value("Day", day.date),
+                                y: .value("Score", day.score)
+                            )
+                            .foregroundStyle(YoungerTheme.mint)
+                            .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
                         }
-                    }
-                    .chartXAxis {
-                        AxisMarks(values: .stride(by: .day, count: 4)) {
-                            AxisValueLabel(format: .dateTime.weekday(.narrow))
-                                .foregroundStyle(YoungerTheme.secondaryText)
+                        .chartYScale(domain: 0...100)
+                        .chartYAxis {
+                            AxisMarks(values: [0, 50, 100]) {
+                                AxisGridLine().foregroundStyle(Color.white.opacity(0.08))
+                                AxisValueLabel().foregroundStyle(YoungerTheme.secondaryText)
+                            }
                         }
+                        .frame(height: 220)
+                    } else {
+                        Text("Keep using Younger for a few days to build an honest trend.")
+                            .font(.subheadline)
+                            .foregroundStyle(YoungerTheme.secondaryText)
+                            .frame(maxWidth: .infinity, minHeight: 120)
                     }
-                    .frame(height: 220)
                 }
                 .padding(20)
                 .youngerCard()
 
-                Text("What’s moving you")
+                Text("Metric trends")
                     .font(.title2.bold())
 
-                InsightRow(icon: "moon.fill", color: YoungerTheme.sky, title: "Sleep is your strongest lever", detail: "Your green days average 47 more minutes of sleep.")
-                InsightRow(icon: "figure.walk", color: YoungerTheme.gold, title: "Afternoon movement dips", detail: "A walk after 3 PM would close your step gap most often.")
-                InsightRow(icon: "heart.fill", color: YoungerTheme.coral, title: "Recovery is trending up", detail: "HRV and resting heart rate improved across the last 7 days.")
+                ForEach(model.visibleMetrics) { metric in
+                    let history = model.history(for: metric.id, days: 30)
+                    InsightRow(
+                        icon: metric.icon,
+                        color: metric.status.color,
+                        title: metric.title,
+                        detail: trendDetail(metric: metric, history: history)
+                    )
+                }
             }
             .padding(18)
             .padding(.bottom, 24)
         }
         .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var trendAverage: Int {
+        Int((model.trend.map(\.score).reduce(0, +) / Double(max(model.trend.count, 1))).rounded())
+    }
+
+    private func trendDetail(metric: DailyMetric, history: [MetricHistoryPoint]) -> String {
+        guard let first = history.first, let last = history.last, history.count >= 2 else {
+            return "\(metric.freshnessText). More days are needed for a trend."
+        }
+        let change = last.value - first.value
+        let direction = change > 0 ? "up" : change < 0 ? "down" : "steady"
+        return "\(history.count)-day record is \(direction) by \(abs(change).formatted(.number.precision(.fractionLength(metric.decimals)))) \(metric.unit)."
     }
 }
 

@@ -193,7 +193,7 @@ export const whoopSnapshot = onRequest(
         whoopRequest("recovery?limit=1", accessToken),
         whoopRequest("cycle?limit=1", accessToken),
         whoopRequest("activity/sleep?limit=1", accessToken),
-        whoopRequest("activity/workout?limit=25", accessToken),
+        whoopRequest("activity/workout?limit=100", accessToken),
       ]);
 
       sendJson(response, 200, buildSnapshot(recoveries, cycles, sleeps, workouts));
@@ -375,10 +375,17 @@ function buildSnapshot(
   const stages = objectValue(sleep, "stage_summary");
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date(startOfToday);
+  const mondayOffset = (startOfWeek.getDay() + 6) % 7;
+  startOfWeek.setDate(startOfWeek.getDate() - mondayOffset);
 
   const todayWorkouts = workouts.filter((workout) => {
     const start = stringValue(workout, "start");
     return Boolean(start && new Date(start) >= startOfToday);
+  });
+  const weekWorkouts = workouts.filter((workout) => {
+    const start = stringValue(workout, "start");
+    return Boolean(start && new Date(start) >= startOfWeek);
   });
   const zoneOneToThreeMilliseconds = todayWorkouts.reduce((total, workout) => {
     const score = objectValue(workout, "score");
@@ -403,6 +410,13 @@ function buildSnapshot(
     if (!start || !end) return total;
     return total + Math.max(new Date(end).getTime() - new Date(start).getTime(), 0);
   }, 0);
+  const weeklyZoneOneToThreeMilliseconds = zoneMilliseconds(
+    weekWorkouts, ["zone_one_milli", "zone_two_milli", "zone_three_milli"],
+  );
+  const weeklyZoneFourToFiveMilliseconds = zoneMilliseconds(
+    weekWorkouts, ["zone_four_milli", "zone_five_milli"],
+  );
+  const weeklyStrengthMilliseconds = strengthDuration(weekWorkouts);
 
   const sleepMilliseconds =
     numberValue(stages, "total_light_sleep_time_milli") +
@@ -425,6 +439,9 @@ function buildSnapshot(
     zone_one_to_three_minutes: zoneOneToThreeMilliseconds / 60_000,
     zone_four_to_five_minutes: zoneFourToFiveMilliseconds / 60_000,
     strength_minutes: strengthMilliseconds / 60_000,
+    weekly_zone_one_to_three_minutes: weeklyZoneOneToThreeMilliseconds / 60_000,
+    weekly_zone_four_to_five_minutes: weeklyZoneFourToFiveMilliseconds / 60_000,
+    weekly_strength_minutes: weeklyStrengthMilliseconds / 60_000,
   };
 }
 
@@ -444,6 +461,27 @@ function workoutZones(score: Record<string, unknown>): Record<string, unknown> {
   return Object.keys(plural).length > 0 ?
     plural :
     objectValue(score, "zone_duration");
+}
+
+function zoneMilliseconds(
+  workouts: Record<string, unknown>[],
+  keys: string[],
+): number {
+  return workouts.reduce((total, workout) => {
+    const zones = workoutZones(objectValue(workout, "score"));
+    return total + keys.reduce((sum, key) => sum + numberValue(zones, key), 0);
+  }, 0);
+}
+
+function strengthDuration(workouts: Record<string, unknown>[]): number {
+  return workouts.reduce((total, workout) => {
+    const sport = stringValue(workout, "sport_name")?.toLowerCase() ?? "";
+    if (!strengthSports.has(sport)) return total;
+    const start = stringValue(workout, "start");
+    const end = stringValue(workout, "end");
+    if (!start || !end) return total;
+    return total + Math.max(new Date(end).getTime() - new Date(start).getTime(), 0);
+  }, 0);
 }
 
 function connectedPageUrl(parameters: Record<string, string>): string {

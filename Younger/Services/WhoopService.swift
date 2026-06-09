@@ -80,7 +80,10 @@ actor WhoopService {
             sleepConsistency: sleep?.sleepConsistency,
             zoneOneToThreeMinutes: nil,
             zoneFourToFiveMinutes: nil,
-            strengthMinutes: nil
+            strengthMinutes: nil,
+            weeklyZoneOneToThreeMinutes: nil,
+            weeklyZoneFourToFiveMinutes: nil,
+            weeklyStrengthMinutes: nil
         )
     }
 
@@ -195,6 +198,9 @@ private struct BackendSnapshot: Decodable {
     let zoneOneToThreeMinutes: Double?
     let zoneFourToFiveMinutes: Double?
     let strengthMinutes: Double?
+    let weeklyZoneOneToThreeMinutes: Double?
+    let weeklyZoneFourToFiveMinutes: Double?
+    let weeklyStrengthMinutes: Double?
 
     var whoopSnapshot: WhoopSnapshot {
         WhoopSnapshot(
@@ -211,7 +217,10 @@ private struct BackendSnapshot: Decodable {
             sleepConsistency: sleepConsistency,
             zoneOneToThreeMinutes: zoneOneToThreeMinutes,
             zoneFourToFiveMinutes: zoneFourToFiveMinutes,
-            strengthMinutes: strengthMinutes
+            strengthMinutes: strengthMinutes,
+            weeklyZoneOneToThreeMinutes: weeklyZoneOneToThreeMinutes,
+            weeklyZoneFourToFiveMinutes: weeklyZoneFourToFiveMinutes,
+            weeklyStrengthMinutes: weeklyStrengthMinutes
         )
     }
 
@@ -230,6 +239,9 @@ private struct BackendSnapshot: Decodable {
         case zoneOneToThreeMinutes = "zone_one_to_three_minutes"
         case zoneFourToFiveMinutes = "zone_four_to_five_minutes"
         case strengthMinutes = "strength_minutes"
+        case weeklyZoneOneToThreeMinutes = "weekly_zone_one_to_three_minutes"
+        case weeklyZoneFourToFiveMinutes = "weekly_zone_four_to_five_minutes"
+        case weeklyStrengthMinutes = "weekly_strength_minutes"
     }
 }
 
